@@ -1,0 +1,704 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MemoMente IA</title>
+    <!-- Tailwind CSS para un diseño rápido y responsivo -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts para una tipografía moderna -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* Estilos personalizados que complementan a Tailwind */
+        :root {
+            --primary-color: #6a0572;
+            --secondary-color: #9d02d7;
+            --accent-color: #00d2ff;
+            --success-color: #39ff14;
+            --danger-color: #ff3131;
+            --text-color: #ecf0f1;
+            --bg-dark: #1a1a2e;
+            --bg-card: #16213e;
+            --shadow-color: rgba(0, 0, 0, 0.4);
+        }
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-color: var(--bg-dark);
+            color: var(--text-color);
+            overflow: hidden; /* Evita el desbordamiento de la animación de fondo */
+        }
+
+        /* Animación de fondo sutil y moderna */
+        .background-animation {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+            background: linear-gradient(45deg, var(--primary-color), var(--secondary-color), var(--accent-color), #0f3460);
+            background-size: 400% 400%;
+            animation: gradientShift 20s ease infinite;
+            z-index: -1;
+            opacity: 0.3;
+        }
+
+        @keyframes gradientShift {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        /* Estilo base para todas las "pantallas" de la aplicación */
+        .screen {
+            position: absolute;
+            transition: opacity 0.5s ease-out, transform 0.5s ease-out;
+            z-index: 10;
+        }
+
+        .screen.hidden {
+            opacity: 0;
+            transform: scale(0.95);
+            pointer-events: none;
+            z-index: 5;
+        }
+
+        /* Estilos para las tarjetas del juego */
+        .game-board {
+            perspective: 1000px;
+        }
+
+        .card {
+            transform-style: preserve-3d;
+            transition: transform 0.6s cubic-bezier(0.4, 0.0, 0.2, 1);
+        }
+
+        .card.flip {
+            transform: rotateY(180deg);
+        }
+
+        .card-face {
+            backface-visibility: hidden;
+            -webkit-backface-visibility: hidden; /* Soporte para Safari */
+        }
+
+        .card-back {
+            transform: rotateY(180deg);
+        }
+
+        .card.matched {
+            opacity: 0.4;
+            transform: rotateY(180deg) scale(0.95);
+        }
+        
+        /* Estilo para el efecto de confeti en la pantalla de victoria */
+        @keyframes fall {
+            0% { transform: translateY(-100px) rotateZ(0deg); opacity: 1; }
+            100% { transform: translateY(100vh) rotateZ(720deg); opacity: 0; }
+        }
+
+        .confetti-piece {
+            position: absolute;
+            opacity: 0;
+        }
+
+        /* Estilos para los botones de respuesta del quiz */
+        .answer-btn.correct {
+            background-color: var(--success-color) !important;
+            color: var(--bg-dark);
+            transform: scale(1.05);
+        }
+        .answer-btn.incorrect {
+            background-color: var(--danger-color) !important;
+            opacity: 0.7;
+        }
+
+    </style>
+</head>
+<body class="flex items-center justify-center min-h-screen">
+    <div class="background-animation"></div>
+
+    <!-- Contenedor principal para las pantallas -->
+    <div class="relative w-full h-full flex items-center justify-center">
+
+        <!-- Pantalla de Inicio -->
+        <div id="start-screen" class="screen w-11/12 max-w-2xl text-center p-8 md:p-12 bg-black bg-opacity-40 rounded-2xl shadow-2xl backdrop-blur-sm">
+            <h1 class="text-4xl md:text-6xl font-bold mb-2 text-shadow"><span class="text-[var(--accent-color)]">MemoMente</span> IA</h1>
+            <p class="text-lg font-semibold text-gray-300 mb-4">INSTITUCION EDUCATIVA LEOPOLDO GARCIA</p>
+            
+            <!-- Logo de la App (Dibujado con SVG) -->
+            <div class="mx-auto my-6 h-24 w-auto md:h-28 flex justify-center items-center">
+                <svg viewBox="0 0 110 90" class="h-full w-full">
+                    <defs>
+                        <filter id="glow">
+                            <feGaussianBlur stdDeviation="1.5" result="coloredBlur"></feGaussianBlur>
+                            <feMerge>
+                                <feMergeNode in="coloredBlur"></feMergeNode>
+                                <feMergeNode in="SourceGraphic"></feMergeNode>
+                            </feMerge>
+                        </filter>
+                    </defs>
+                    <!-- Hemisferio Orgánico (Izquierda) -->
+                    <path d="M50 85 C 20 85, 5 65, 10 40 C 15 15, 30 5, 50 5 L 50 85 Z" fill="url(#grad-left)"/>
+                    <linearGradient id="grad-left" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" style="stop-color:var(--secondary-color);stop-opacity:1" />
+                        <stop offset="100%" style="stop-color:var(--primary-color);stop-opacity:1" />
+                    </linearGradient>
+
+                    <!-- Hemisferio Digital (Derecha) -->
+                    <path d="M60 5 C 80 5, 95 15, 100 40 C 105 65, 90 85, 60 85 L 60 5 Z" fill="var(--bg-card)" stroke="var(--accent-color)" stroke-width="0.5"/>
+                    
+                    <!-- Circuitos y Nodos -->
+                    <g stroke="var(--accent-color)" stroke-width="1" filter="url(#glow)">
+                        <!-- Nodos -->
+                        <circle cx="70" cy="20" r="3" fill="var(--accent-color)"/>
+                        <circle cx="85" cy="30" r="3" fill="var(--accent-color)"/>
+                        <circle cx="75" cy="45" r="4" fill="var(--accent-color)"/>
+                        <circle cx="90" cy="60" r="3" fill="var(--accent-color)"/>
+                        <circle cx="70" cy="70" r="3" fill="var(--accent-color)"/>
+                        
+                        <!-- Conexiones -->
+                        <line x1="70" y1="20" x2="85" y2="30"/>
+                        <line x1="85" y1="30" x2="75" y2="45"/>
+                        <line x1="75" y1="45" x2="90" y2="60"/>
+                        <line x1="90" y1="60" x2="70" y2="70"/>
+                        <path d="M 70 20 Q 65 45, 75 45" stroke-dasharray="2" fill="none"/>
+                        <path d="M 85 30 Q 95 45, 90 60" fill="none"/>
+                    </g>
+                </svg>
+            </div>
+            
+            <button id="start-button" class="w-full md:w-auto bg-[var(--secondary-color)] hover:bg-[var(--primary-color)] text-white font-bold py-3 px-8 rounded-lg text-xl shadow-lg transform hover:scale-105 transition-transform duration-300 mb-8">
+                Jugar
+            </button>
+            <div class="text-sm text-gray-400">
+                <p class="font-bold">Un proyecto de:</p>
+                <p>Dubier Velandia, Danilo Aldana & Gabriel Villarreal</p>
+                <p class="mt-2 font-bold">Supervisado por:</p>
+                <p>Prof. Javier Bonilla</p>
+            </div>
+        </div>
+
+        <!-- Pantalla de Selección de Modo -->
+        <div id="mode-select-screen" class="screen hidden w-11/12 max-w-2xl text-center p-8 md:p-12 bg-black bg-opacity-40 rounded-2xl shadow-2xl backdrop-blur-sm">
+            <h2 class="text-3xl md:text-4xl font-bold mb-8">Elige un modo de juego</h2>
+            <div class="flex flex-col md:flex-row gap-6">
+                <button id="custom-mode-btn" class="flex-1 bg-blue-500 hover:bg-blue-600 text-white font-bold p-6 rounded-lg shadow-lg transform hover:-translate-y-1 transition-transform duration-300">
+                    <span class="text-xl">📝 Modo Personalizado</span>
+                    <p class="font-normal text-sm mt-2">Crea un juego a partir de tus propios apuntes o textos.</p>
+                </button>
+                <button id="themed-mode-btn" class="flex-1 bg-green-500 hover:bg-green-600 text-white font-bold p-6 rounded-lg shadow-lg transform hover:-translate-y-1 transition-transform duration-300">
+                    <span class="text-xl">📚 Modo Temático</span>
+                    <p class="font-normal text-sm mt-2">Elige un tema y la IA creará un desafío para ti.</p>
+                </button>
+            </div>
+        </div>
+
+        <!-- Pantalla de Configuración Personalizada -->
+        <div id="custom-setup-screen" class="screen hidden w-11/12 max-w-2xl text-center p-8 md:p-12 bg-black bg-opacity-40 rounded-2xl shadow-2xl backdrop-blur-sm">
+            <h2 class="text-3xl md:text-4xl font-bold mb-4">Modo Personalizado</h2>
+            <p class="mb-6 text-gray-300">Pega aquí tu texto (mínimo 150 palabras) y la IA extraerá los conceptos clave para el juego.</p>
+            <textarea id="user-text-input" class="w-full h-48 p-4 bg-gray-900 bg-opacity-70 border-2 border-gray-600 rounded-lg text-white resize-none focus:outline-none focus:border-[var(--accent-color)]" placeholder="Pega tus apuntes de historia, un resumen de biología, la letra de una canción..."></textarea>
+            <p id="word-counter" class="text-right text-sm mt-2 text-red-500">0 / 150 palabras</p>
+            <div class="flex flex-col md:flex-row gap-4 mt-4">
+                <button id="back-to-mode-select-1" class="w-full md:w-auto bg-gray-600 hover:bg-gray-700 text-white font-bold py-3 px-6 rounded-lg transition-colors duration-300">Volver</button>
+                <button id="generate-custom-game-btn" class="w-full md:flex-1 bg-[var(--secondary-color)] hover:bg-[var(--primary-color)] text-white font-bold py-3 px-6 rounded-lg shadow-lg transform hover:scale-105 transition-all duration-300">✨ ¡Generar Juego!</button>
+            </div>
+        </div>
+
+        <!-- Pantalla de Configuración Temática -->
+        <div id="themed-setup-screen" class="screen hidden w-11/12 max-w-2xl text-center p-8 md:p-12 bg-black bg-opacity-40 rounded-2xl shadow-2xl backdrop-blur-sm">
+            <h2 class="text-3xl md:text-4xl font-bold mb-8">Elige un Tema</h2>
+            <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
+                <button data-theme="Historia Universal" class="theme-btn bg-yellow-600 hover:bg-yellow-700 p-4 rounded-lg">✨ 🏛️ Historia</button>
+                <button data-theme="Ciencia y Biología" class="theme-btn bg-green-600 hover:bg-green-700 p-4 rounded-lg">✨ 🔬 Ciencia</button>
+                <button data-theme="Geografía Mundial" class="theme-btn bg-blue-600 hover:bg-blue-700 p-4 rounded-lg">✨ 🌍 Geografía</button>
+                <button data-theme="Arte y Literatura" class="theme-btn bg-purple-600 hover:bg-purple-700 p-4 rounded-lg">✨ 🎨 Arte</button>
+                <button data-theme="El Sistema Solar" class="theme-btn bg-indigo-600 hover:bg-indigo-700 p-4 rounded-lg">✨ 🚀 Espacio</button>
+                <button data-theme="Cultura Pop (Películas y Series)" class="theme-btn bg-red-600 hover:bg-red-700 p-4 rounded-lg">✨ 🎬 Cultura Pop</button>
+            </div>
+            <button id="back-to-mode-select-2" class="w-full md:w-auto bg-gray-600 hover:bg-gray-700 text-white font-bold py-3 px-6 rounded-lg mt-8 transition-colors duration-300">Volver</button>
+        </div>
+
+        <!-- Pantalla del Juego -->
+        <div id="game-screen" class="screen hidden w-11/12 max-w-4xl p-4 md:p-8 bg-black bg-opacity-40 rounded-2xl shadow-2xl backdrop-blur-sm">
+            <div class="flex justify-between items-center mb-4 px-2">
+                <div class="flex gap-4 md:gap-8 text-lg md:text-xl font-semibold">
+                    <span>Intentos: <span id="attempts-counter" class="text-[var(--accent-color)]">0</span></span>
+                    <span>Tiempo: <span id="timer" class="text-[var(--accent-color)]">00:00</span></span>
+                </div>
+                <button id="restart-game-button" class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg transition-colors duration-300">Reiniciar</button>
+            </div>
+            <div id="game-board" class="game-board grid grid-cols-4 gap-2 md:gap-4 w-full">
+                <!-- Las tarjetas se generan aquí con JavaScript -->
+            </div>
+        </div>
+
+        <!-- Pantalla de Victoria del Juego de Memoria -->
+        <div id="win-screen" class="screen hidden w-11/12 max-w-2xl text-center p-8 md:p-12 bg-black bg-opacity-40 rounded-2xl shadow-2xl backdrop-blur-sm">
+            <div class="relative">
+                <div id="confetti-container" class="absolute inset-0 z-0"></div>
+                <h2 class="text-4xl md:text-5xl font-bold mb-4 text-[var(--success-color)] relative z-10">¡Felicidades! 🎉</h2>
+                <p class="text-lg md:text-xl mb-6 relative z-10">Completaste el juego de memoria.</p>
+                <div class="text-lg md:text-xl mb-8 bg-gray-900 bg-opacity-50 p-4 rounded-lg relative z-10">
+                    <p>Intentos: <span id="final-attempts" class="font-bold text-[var(--accent-color)]"></span></p>
+                    <p>Tiempo: <span id="final-time" class="font-bold text-[var(--accent-color)]"></span></p>
+                </div>
+                <div class="flex flex-col md:flex-row gap-4 mt-6">
+                    <button id="play-again-button" class="w-full md:w-auto bg-gray-600 hover:bg-gray-700 text-white font-bold py-3 px-6 rounded-lg transition-colors duration-300">Jugar de Nuevo</button>
+                    <button id="learn-more-btn" class="w-full md:flex-1 bg-[var(--accent-color)] hover:bg-blue-500 text-black font-bold py-3 px-6 rounded-lg shadow-lg transform hover:scale-105 transition-all duration-300">Aprender Más ✨</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Pantalla de Retroalimentación -->
+        <div id="feedback-screen" class="screen hidden w-11/12 max-w-3xl p-8 md:p-12 bg-black bg-opacity-40 rounded-2xl shadow-2xl backdrop-blur-sm">
+            <h2 class="text-3xl md:text-4xl font-bold mb-6 text-center">Resumen de Conceptos</h2>
+            <div id="feedback-content" class="text-left max-h-[50vh] overflow-y-auto space-y-4 pr-4">
+                <!-- El contenido de la retroalimentación se inyecta aquí -->
+            </div>
+            <div class="flex flex-col md:flex-row gap-4 mt-8">
+                <button id="play-again-from-feedback-btn" class="w-full md:w-auto bg-gray-600 hover:bg-gray-700 text-white font-bold py-3 px-6 rounded-lg">Jugar de Nuevo</button>
+                <button id="start-quiz-btn" class="w-full md:flex-1 bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-6 rounded-lg shadow-lg transform hover:scale-105 transition-all duration-300">¡Iniciar Quiz! 🧠</button>
+            </div>
+        </div>
+        
+        <!-- Pantalla del Quiz -->
+        <div id="quiz-screen" class="screen hidden w-11/12 max-w-3xl p-8 md:p-12 bg-black bg-opacity-40 rounded-2xl shadow-2xl backdrop-blur-sm">
+             <div id="quiz-header" class="flex justify-between items-center mb-6">
+                <h2 class="text-2xl font-bold">Quiz Rápido</h2>
+                <p class="text-lg font-semibold">Pregunta <span id="question-number">1</span> de <span id="total-questions">5</span></p>
+            </div>
+            <p id="question-text" class="text-xl md:text-2xl text-center min-h-[100px] mb-8"></p>
+            <div id="answer-options" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <!-- Las opciones de respuesta se inyectan aquí -->
+            </div>
+        </div>
+
+        <!-- Pantalla de Resultados del Quiz -->
+        <div id="quiz-results-screen" class="screen hidden w-11/12 max-w-2xl text-center p-8 md:p-12 bg-black bg-opacity-40 rounded-2xl shadow-2xl backdrop-blur-sm">
+            <h2 class="text-4xl md:text-5xl font-bold mb-4 text-[var(--success-color)]">¡Quiz Completado!</h2>
+            <p class="text-2xl mb-4">Tu puntuación final es:</p>
+            <p class="text-6xl font-bold text-[var(--accent-color)] my-4"><span id="final-score">0</span> / <span id="total-score">5</span></p>
+            <button id="play-again-from-quiz-btn" class="w-full md:w-auto bg-[var(--secondary-color)] hover:bg-[var(--primary-color)] text-white font-bold py-3 px-8 rounded-lg text-xl shadow-lg transform hover:scale-105 transition-transform duration-300 mt-6">
+                Jugar de Nuevo
+            </button>
+        </div>
+
+
+        <!-- Overlay de Carga -->
+        <div id="loading-overlay" class="hidden absolute inset-0 bg-black bg-opacity-70 flex-col items-center justify-center z-50 text-center">
+            <div class="w-16 h-16 border-4 border-t-transparent border-[var(--accent-color)] rounded-full animate-spin"></div>
+            <p id="loading-text" class="mt-4 text-xl">✨ La IA está creando tu desafío...</p>
+        </div>
+
+    </div>
+
+    <script type="module">
+        // --- REFERENCIAS A ELEMENTOS DEL DOM ---
+        const screens = {
+            start: document.getElementById('start-screen'),
+            modeSelect: document.getElementById('mode-select-screen'),
+            customSetup: document.getElementById('custom-setup-screen'),
+            themedSetup: document.getElementById('themed-setup-screen'),
+            game: document.getElementById('game-screen'),
+            win: document.getElementById('win-screen'),
+            feedback: document.getElementById('feedback-screen'),
+            quiz: document.getElementById('quiz-screen'),
+            quizResults: document.getElementById('quiz-results-screen'),
+        };
+        const loadingOverlay = document.getElementById('loading-overlay');
+        const loadingText = document.getElementById('loading-text');
+        const gameBoard = document.getElementById('game-board');
+        const attemptsCounter = document.getElementById('attempts-counter');
+        const timerDisplay = document.getElementById('timer');
+        const finalAttemptsDisplay = document.getElementById('final-attempts');
+        const finalTimeDisplay = document.getElementById('final-time');
+        const userTextInput = document.getElementById('user-text-input');
+        const wordCounter = document.getElementById('word-counter');
+
+        // --- VARIABLES DE ESTADO DEL JUEGO Y QUIZ ---
+        let cards = [];
+        let flippedCards = [];
+        let matchedPairs = 0;
+        let attempts = 0;
+        let timer;
+        let seconds = 0;
+        let gameStarted = false;
+        let currentContent = []; // Guarda los conceptos del juego actual
+        let quizQuestions = [];
+        let currentQuestionIndex = 0;
+        let quizScore = 0;
+
+        // --- LÓGICA DE NAVEGACIÓN ENTRE PANTALLAS ---
+        function showScreen(screenId) {
+            Object.values(screens).forEach(screen => screen.classList.add('hidden'));
+            screens[screenId].classList.remove('hidden');
+        }
+
+        // --- LÓGICA DE LA API DE IA (GEMINI) ---
+        async function callAIApi(prompt, schema) {
+            console.log("Enviando a Gemini:", prompt);
+            loadingOverlay.classList.remove('hidden');
+            loadingOverlay.classList.add('flex');
+
+            // =========================================================================
+            // PASO IMPORTANTE: Pega tu API Key de Google AI Studio aquí
+            // =========================================================================
+            const apiKey = "AQUÍ_VA_TU_API_KEY"; 
+            // =========================================================================
+
+            if (apiKey === "AQUÍ_VA_TU_API_KEY") {
+                alert("Error: No has introducido tu API Key. Obtenla en Google AI Studio y pégala en el código.");
+                loadingOverlay.classList.add('hidden');
+                loadingOverlay.classList.remove('flex');
+                return null;
+            }
+
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
+            
+            const payload = {
+                contents: [{ parts: [{ text: prompt }] }],
+                generationConfig: {
+                    responseMimeType: "application/json",
+                    responseSchema: schema
+                }
+            };
+            
+            try {
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+
+                const result = await response.json();
+                
+                if (result.candidates?.[0]?.content?.parts?.[0]?.text) {
+                    const jsonText = result.candidates[0].content.parts[0].text;
+                    return JSON.parse(jsonText);
+                } else {
+                    throw new Error("Respuesta inválida de la API");
+                }
+            } catch (error) {
+                console.error("Error al llamar a la API de Gemini:", error);
+                alert("Hubo un error al contactar a la IA. Revisa tu API Key o inténtalo de nuevo más tarde.");
+                return null;
+            } finally {
+                loadingOverlay.classList.add('hidden');
+                loadingOverlay.classList.remove('flex');
+            }
+        }
+
+        // --- LÓGICA DEL JUEGO DE MEMORIA ---
+
+        function shuffle(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+            return array;
+        }
+        
+        function initializeGame(content) {
+            currentContent = content;
+            gameBoard.innerHTML = '';
+            cards = [];
+            flippedCards = [];
+            matchedPairs = 0;
+            attempts = 0;
+            seconds = 0;
+            gameStarted = false;
+            attemptsCounter.textContent = '0';
+            timerDisplay.textContent = '00:00';
+            clearInterval(timer);
+
+            let gameContent = shuffle([...content, ...content]);
+
+            gameContent.forEach(item => {
+                const cardElement = document.createElement('div');
+                cardElement.classList.add('card', 'w-full', 'aspect-square', 'relative', 'cursor-pointer');
+                cardElement.dataset.value = item;
+                cardElement.innerHTML = `
+                    <div class="card-face card-front absolute w-full h-full flex items-center justify-center bg-[var(--bg-card)] rounded-lg shadow-lg"></div>
+                    <div class="card-face card-back absolute w-full h-full flex items-center justify-center bg-[var(--primary-color)] rounded-lg shadow-lg text-lg md:text-2xl text-center p-2">${item}</div>`;
+                cardElement.addEventListener('click', flipCard);
+                gameBoard.appendChild(cardElement);
+                cards.push(cardElement);
+            });
+        }
+
+        function flipCard() {
+            if (!gameStarted) {
+                startTimer();
+                gameStarted = true;
+            }
+            if (flippedCards.length < 2 && !this.classList.contains('flip') && !this.classList.contains('matched')) {
+                this.classList.add('flip');
+                flippedCards.push(this);
+                if (flippedCards.length === 2) {
+                    attempts++;
+                    attemptsCounter.textContent = attempts;
+                    setTimeout(checkMatch, 1000);
+                }
+            }
+        }
+
+        function checkMatch() {
+            const [card1, card2] = flippedCards;
+            if (card1.dataset.value === card2.dataset.value) {
+                card1.classList.add('matched');
+                card2.classList.add('matched');
+                matchedPairs++;
+                if (matchedPairs === cards.length / 2) {
+                    endGame();
+                }
+            } else {
+                card1.classList.remove('flip');
+                card2.classList.remove('flip');
+            }
+            flippedCards = [];
+        }
+
+        function startTimer() {
+            timer = setInterval(() => {
+                seconds++;
+                const minutes = Math.floor(seconds / 60);
+                const remSeconds = seconds % 60;
+                timerDisplay.textContent = `${String(minutes).padStart(2, '0')}:${String(remSeconds).padStart(2, '0')}`;
+            }, 1000);
+        }
+
+        function endGame() {
+            clearInterval(timer);
+            finalAttemptsDisplay.textContent = attempts;
+            finalTimeDisplay.textContent = timerDisplay.textContent;
+            createConfetti();
+            setTimeout(() => showScreen('win'), 500);
+        }
+        
+        // --- LÓGICA DE RETROALIMENTACIÓN Y QUIZ ---
+
+        async function handleLearnMore() {
+            loadingText.textContent = "✨ La IA está generando un resumen...";
+            const conceptsString = currentContent.join(', ');
+            const prompt = `Para la siguiente lista de conceptos: ${conceptsString}, genera una definición corta y clara para cada uno.`;
+            const schema = {
+                type: "OBJECT",
+                properties: {
+                    feedback: {
+                        type: "ARRAY",
+                        items: {
+                            type: "OBJECT",
+                            properties: {
+                                term: { type: "STRING" },
+                                definition: { type: "STRING" }
+                            },
+                            required: ["term", "definition"]
+                        }
+                    }
+                },
+                required: ["feedback"]
+            };
+            const result = await callAIApi(prompt, schema);
+            if (result && result.feedback) {
+                displayFeedback(result.feedback);
+                showScreen('feedback');
+            }
+        }
+
+        function displayFeedback(feedbackData) {
+            const feedbackContainer = document.getElementById('feedback-content');
+            feedbackContainer.innerHTML = '';
+            feedbackData.forEach(item => {
+                const div = document.createElement('div');
+                div.innerHTML = `<p class="font-bold text-lg text-[var(--accent-color)]">${item.term}</p><p class="text-gray-300">${item.definition}</p>`;
+                feedbackContainer.appendChild(div);
+            });
+        }
+
+        async function handleStartQuiz() {
+            loadingText.textContent = "🧠 La IA está preparando tu quiz...";
+            const conceptsString = currentContent.join(', ');
+            const prompt = `Crea un quiz de 5 preguntas de opción múltiple basado en los siguientes conceptos: ${conceptsString}. Cada pregunta debe tener 4 opciones (una correcta y tres incorrectas).`;
+            const schema = {
+                type: "OBJECT",
+                properties: {
+                    questions: {
+                        type: "ARRAY",
+                        items: {
+                            type: "OBJECT",
+                            properties: {
+                                question: { type: "STRING" },
+                                options: {
+                                    type: "ARRAY",
+                                    items: { type: "STRING" }
+                                },
+                                answer: { type: "STRING" }
+                            },
+                             required: ["question", "options", "answer"]
+                        }
+                    }
+                },
+                required: ["questions"]
+            };
+            const result = await callAIApi(prompt, schema);
+            if(result && result.questions && result.questions.length > 0) {
+                startQuiz(result.questions);
+            }
+        }
+
+        function startQuiz(questions) {
+            quizQuestions = questions.map(q => ({...q, options: shuffle(q.options)})); // Mezclar opciones
+            currentQuestionIndex = 0;
+            quizScore = 0;
+            showScreen('quiz');
+            displayQuestion();
+        }
+        
+        function displayQuestion() {
+            if (currentQuestionIndex >= quizQuestions.length) {
+                showQuizResults();
+                return;
+            }
+            const questionData = quizQuestions[currentQuestionIndex];
+            document.getElementById('question-number').textContent = currentQuestionIndex + 1;
+            document.getElementById('total-questions').textContent = quizQuestions.length;
+            document.getElementById('question-text').textContent = questionData.question;
+
+            const optionsContainer = document.getElementById('answer-options');
+            optionsContainer.innerHTML = '';
+            questionData.options.forEach(option => {
+                const button = document.createElement('button');
+                button.textContent = option;
+                button.classList.add('answer-btn', 'w-full', 'p-4', 'bg-[var(--bg-card)]', 'hover:bg-[var(--primary-color)]', 'rounded-lg', 'transition-all', 'duration-300');
+                button.onclick = (e) => handleAnswerClick(e.target, questionData.answer);
+                optionsContainer.appendChild(button);
+            });
+        }
+
+        function handleAnswerClick(button, correctAnswer) {
+            const buttons = document.querySelectorAll('.answer-btn');
+            buttons.forEach(btn => btn.disabled = true); // Deshabilitar botones
+            
+            if (button.textContent === correctAnswer) {
+                button.classList.add('correct');
+                quizScore++;
+            } else {
+                button.classList.add('incorrect');
+                // Resaltar la respuesta correcta
+                buttons.forEach(btn => {
+                    if (btn.textContent === correctAnswer) {
+                        btn.classList.add('correct');
+                    }
+                });
+            }
+
+            setTimeout(() => {
+                currentQuestionIndex++;
+                displayQuestion();
+            }, 2000); // Esperar 2 segundos para ver el resultado
+        }
+
+        function showQuizResults() {
+            document.getElementById('final-score').textContent = quizScore;
+            document.getElementById('total-score').textContent = quizQuestions.length;
+            showScreen('quizResults');
+        }
+
+
+        function createConfetti() {
+            const container = document.getElementById('confetti-container');
+            container.innerHTML = '';
+            for (let i = 0; i < 100; i++) {
+                const piece = document.createElement('div');
+                piece.classList.add('confetti-piece');
+                piece.style.width = `${Math.random() * 10 + 5}px`;
+                piece.style.height = piece.style.width;
+                piece.style.backgroundColor = `hsl(${Math.random() * 360}, 100%, 70%)`;
+                piece.style.left = `${Math.random() * 100}%`;
+                piece.style.animation = `fall ${Math.random() * 3 + 2}s ease-out forwards ${Math.random() * 2}s`;
+                container.appendChild(piece);
+            }
+        }
+        
+        function resetToModeSelect() {
+            showScreen('modeSelect');
+        }
+
+        // --- MANEJADORES DE EVENTOS (EVENT LISTENERS) ---
+        document.getElementById('start-button').addEventListener('click', () => showScreen('modeSelect'));
+        document.getElementById('custom-mode-btn').addEventListener('click', () => showScreen('customSetup'));
+        document.getElementById('themed-mode-btn').addEventListener('click', () => showScreen('themedSetup'));
+        document.getElementById('back-to-mode-select-1').addEventListener('click', resetToModeSelect);
+        document.getElementById('back-to-mode-select-2').addEventListener('click', resetToModeSelect);
+        document.getElementById('play-again-button').addEventListener('click', resetToModeSelect);
+        document.getElementById('play-again-from-feedback-btn').addEventListener('click', resetToModeSelect);
+        document.getElementById('play-again-from-quiz-btn').addEventListener('click', resetToModeSelect);
+        
+        userTextInput.addEventListener('input', () => {
+            const text = userTextInput.value.trim();
+            const words = text === '' ? 0 : text.split(/\s+/).filter(Boolean).length;
+            wordCounter.textContent = `${words} / 150 palabras`;
+
+            if (words >= 150) {
+                wordCounter.classList.remove('text-red-500');
+                wordCounter.classList.add('text-green-500');
+            } else {
+                wordCounter.classList.remove('text-green-500');
+                wordCounter.classList.add('text-red-500');
+            }
+        });
+
+        document.getElementById('generate-custom-game-btn').addEventListener('click', async () => {
+            const text = document.getElementById('user-text-input').value;
+            if (text.split(/\s+/).filter(Boolean).length < 150) {
+                alert("Por favor, introduce un texto con al menos 150 palabras.");
+                return;
+            }
+            loadingText.textContent = "✨ La IA está analizando tu texto...";
+            const prompt = `Extrae 8 conceptos o términos clave de los siguientes apuntes. Deben ser palabras o frases cortas. Texto: ${text}`;
+            const schema = {type: "OBJECT", properties: {concepts: {type: "ARRAY", items: { type: "STRING" }}}, required: ["concepts"]};
+            const result = await callAIApi(prompt, schema);
+            if(result && result.concepts && result.concepts.length >= 8) {
+                initializeGame(result.concepts.slice(0, 8));
+                showScreen('game');
+            } else {
+                 alert("La IA no pudo generar un juego con este texto. Inténtalo de nuevo con un texto más claro.");
+            }
+        });
+
+        document.querySelectorAll('.theme-btn').forEach(button => {
+            button.addEventListener('click', async () => {
+                const theme = button.dataset.theme;
+                loadingText.textContent = "✨ La IA está buscando conceptos...";
+                const prompt = `Actúa como un profesor experto en ${theme}. Genera 8 conceptos clave relacionados para un juego de memoria. Deben ser palabras o frases cortas.`;
+                const schema = {type: "OBJECT", properties: {concepts: {type: "ARRAY", items: { type: "STRING" }}}, required: ["concepts"]};
+                const result = await callAIApi(prompt, schema);
+                 if(result && result.concepts && result.concepts.length >= 8) {
+                    initializeGame(result.concepts.slice(0, 8));
+                    showScreen('game');
+                } else {
+                    alert("La IA no pudo generar un juego sobre este tema. Inténtalo de nuevo.");
+                }
+            });
+        });
+
+        document.getElementById('restart-game-button').addEventListener('click', () => {
+            if(currentContent.length > 0) initializeGame(currentContent);
+        });
+        
+        document.getElementById('learn-more-btn').addEventListener('click', handleLearnMore);
+        document.getElementById('start-quiz-btn').addEventListener('click', handleStartQuiz);
+
+        // --- INICIO DE LA APLICACIÓN ---
+        showScreen('start');
+
+    </script>
+</body>
+</html>
+
